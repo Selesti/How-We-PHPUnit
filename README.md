@@ -8,16 +8,17 @@
     - Migrations
     - Using `setUp()` and `tearDown()` 
     - Authenticating Users
-- Feature Tests
-    - Mocks
-    - API Integration
-    - Classes
-- Unit Tests
-    - Private/Protected
+- Testing Concepts
+    - Feature Tests
+    - Browser Tests
+    - Unit Tests
+    - TDD
 - Writing Tests
     - Arrange
     - Act
     - Assert
+    - Mocks
+    - API Integration
 - Running Tests
     - Refactoring
 
@@ -251,9 +252,9 @@ $this
     ]);
 ```
 
-## Feature Tests
+## Testing Concepts
 
-They try to keep terminology in Laravel simple, having on 3 categories of tests
+In Laravel try to keep terminology simple, having on 3 categories of tests
 
 - Feature tests
 - Browser tests
@@ -267,7 +268,7 @@ You could think of it as..
 
 That means all things like integration testing, end-to-end testing etc - they're all considered as feature tests.
 
-----
+### Feature Tests
 
 Typically Feature tests will not test a single thing - they will enter through a chain of other functions and is the only way to test Private/Protected methods.
 
@@ -329,7 +330,7 @@ This chain of calling would be considered as a Feature test as it has the abilit
 
 Because the `can()` function is private, it can only be invoked by the `UserService` which means you cannot write a Unit test for it. What you can do however is create a test which inherantly tests it is doing what it is expected via the above process, or create a test which is more isolated, perhaps a unit test for `UserService::canUpload()` which will in turn call the `can()` method proving if it works or not.
 
-## Unit Tests
+### Unit Tests
 
 As mentioned previously, Unit tests can be used for testing things in much more isolation - traditionally they will be used to test a single thing. However we're not getting into definitions - this is more about keeping a simple to follow structure rather than symantics.
 
@@ -349,3 +350,83 @@ public function test_i_can_post_new_ideas()
 }
 
 ```
+
+Will end up doing something like
+
+
+```php
+class User 
+{
+    public function createIdea($data)
+    {
+        if (!$user->can('create ideas')) {
+            throw new Exception('This user does not have permission to create ideas.');
+        }
+
+        $idea = new Idea($data);
+        $this->ideas()->save($idea);
+
+        if ($base64 = data_get($data, 'photo', null)) {
+            $idea->attachPhoto($base64);
+        }
+
+        if ($categories = data_get($data, 'categories')) {
+            $idea->categories()->associate(...$categories);
+        }
+
+        event(
+            new IdeaCreated($idea)
+        );
+
+        IdeaService::rebuildStatisticCache();
+
+        return $idea;
+    }
+}
+```
+
+You can see this method is actually doing 7 things
+
+- Running its own validation
+- Creating the idea entity
+- Attaching a photo
+- Associating categories
+- Firing an event
+- Rebuilding the cache
+- Returning the new idea entity
+
+So although this method does actually cross over into the realm of potentially being a Feature test - we believe its quite acceptable to organise this within your Unit folders when you deem appropriate.
+
+However remember - you can only run this sort of test on `public` methods, `protected` and `private` methods can only be tested by going via a public method - so these might be considered as feature tests.
+
+### Browser Tests
+
+Laravel comes with a built in API for using headless Google Chrome - meaning you can run browser tests via PHPUnit using Laravel Dusk.
+
+It is built upon the Facebook Webdriver and only works with Chrome currently - however you can configure it to use any other Selenium Server like Browserstack.
+
+It lets you test more general purpose things like if a contact or registration form works as expected.
+
+```php
+
+$this->browse(function ($browser) use ($user) {
+    
+    $browser->maximize();
+
+    $browser->loginAs($user)
+            ->visit('/contact')
+            ->waitFor('.form.loaded', 5)
+            ->type('email', $user->email)
+            ->type('message', 'this is my message')
+            ->press('Send')
+            ->waitFor('.form.success')
+            ->assertPathIs('/thank-you')
+            ->assertSee('Thank you for your message');
+});
+```
+
+### Test Driven Development
+
+This is a massive concept which can be covered in much better detail by https://course.testdrivenlaravel.com/
+
+However in a nut-shell it is the concept of instead of using your browser or something like postman to keep hitting an endpoint or a page, you write the code you WANT to interact with, a term coined as "Programming by wishful thinking" - Effectively it is write the code you WISH you could use, even if it doesn't exist yet.
