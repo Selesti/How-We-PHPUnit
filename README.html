@@ -366,17 +366,13 @@ pre.line-numbers > code {
 <li>Using <code>setUp()</code> and <code>tearDown()</code> </li>
 <li>Authenticating Users</li>
 </ul></li>
-<li>Feature Tests
+<li>Testing Concepts
 
 <ul>
-<li>Mocks</li>
-<li>API Integration</li>
-<li>Classes</li>
-</ul></li>
-<li>Unit Tests
-
-<ul>
-<li>Private/Protected</li>
+<li>Feature Tests</li>
+<li>Browser Tests</li>
+<li>Unit Tests</li>
+<li>TDD</li>
 </ul></li>
 <li>Writing Tests
 
@@ -384,11 +380,13 @@ pre.line-numbers > code {
 <li>Arrange</li>
 <li>Act</li>
 <li>Assert</li>
+<li><del>Mocks</del></li>
+<li><del>API Integration</del></li>
 </ul></li>
-<li>Running Tests
+<li><del>Running Tests</del>
 
 <ul>
-<li>Refactoring</li>
+<li><del>Refactoring</del></li>
 </ul></li>
 </ul>
 
@@ -606,9 +604,9 @@ function testTwo()
         &#39;photo&#39; =&gt; FakeFile::class
     ]);</code></pre></div>
 
-<h2 id="toc_11">Feature Tests</h2>
+<h2 id="toc_11">Testing Concepts</h2>
 
-<p>They try to keep terminology in Laravel simple, having on 3 categories of tests</p>
+<p>In Laravel try to keep terminology simple, having on 3 categories of tests</p>
 
 <ul>
 <li>Feature tests</li>
@@ -626,7 +624,7 @@ function testTwo()
 
 <p>That means all things like integration testing, end-to-end testing etc - they&#39;re all considered as feature tests.</p>
 
-<hr>
+<h3 id="toc_12">Feature Tests</h3>
 
 <p>Typically Feature tests will not test a single thing - they will enter through a chain of other functions and is the only way to test Private/Protected methods.</p>
 
@@ -684,7 +682,7 @@ class UserService
 
 <p>Because the <code>can()</code> function is private, it can only be invoked by the <code>UserService</code> which means you cannot write a Unit test for it. What you can do however is create a test which inherantly tests it is doing what it is expected via the above process, or create a test which is more isolated, perhaps a unit test for <code>UserService::canUpload()</code> which will in turn call the <code>can()</code> method proving if it works or not.</p>
 
-<h2 id="toc_12">Unit Tests</h2>
+<h3 id="toc_13">Unit Tests</h3>
 
 <p>As mentioned previously, Unit tests can be used for testing things in much more isolation - traditionally they will be used to test a single thing. However we&#39;re not getting into definitions - this is more about keeping a simple to follow structure rather than symantics.</p>
 
@@ -702,6 +700,209 @@ class UserService
     $this-&gt;assertEquals(1, Idea::count());
 }
 </code></pre></div>
+
+<p>Will end up doing something like</p>
+
+<div><pre class="line-numbers"><code class="language-php">class User 
+{
+    public function createIdea($data)
+    {
+        if (!$user-&gt;can(&#39;create ideas&#39;)) {
+            throw new Exception(&#39;This user does not have permission to create ideas.&#39;);
+        }
+
+        $idea = new Idea($data);
+        $this-&gt;ideas()-&gt;save($idea);
+
+        if ($base64 = data_get($data, &#39;photo&#39;, null)) {
+            $idea-&gt;attachPhoto($base64);
+        }
+
+        if ($categories = data_get($data, &#39;categories&#39;)) {
+            $idea-&gt;categories()-&gt;associate(...$categories);
+        }
+
+        event(
+            new IdeaCreated($idea)
+        );
+
+        IdeaService::rebuildStatisticCache();
+
+        return $idea;
+    }
+}</code></pre></div>
+
+<p>You can see this method is actually doing 7 things</p>
+
+<ul>
+<li>Running its own validation</li>
+<li>Creating the idea entity</li>
+<li>Attaching a photo</li>
+<li>Associating categories</li>
+<li>Firing an event</li>
+<li>Rebuilding the cache</li>
+<li>Returning the new idea entity</li>
+</ul>
+
+<p>So although this method does actually cross over into the realm of potentially being a Feature test - we believe its quite acceptable to organise this within your Unit folders when you deem appropriate.</p>
+
+<p>However remember - you can only run this sort of test on <code>public</code> methods, <code>protected</code> and <code>private</code> methods can only be tested by going via a public method - so these might be considered as feature tests.</p>
+
+<h3 id="toc_14">Browser Tests</h3>
+
+<p>Laravel comes with a built in API for using headless Google Chrome - meaning you can run browser tests via PHPUnit using Laravel Dusk.</p>
+
+<p>It is built upon the Facebook Webdriver and only works with Chrome currently - however you can configure it to use any other Selenium Server like Browserstack.</p>
+
+<p>It lets you test more general purpose things like if a contact or registration form works as expected.</p>
+
+<div><pre class="line-numbers"><code class="language-php">
+$this-&gt;browse(function ($browser) use ($user) {
+    
+    $browser-&gt;maximize();
+
+    $browser-&gt;loginAs($user)
+            -&gt;visit(&#39;/contact&#39;)
+            -&gt;waitFor(&#39;.form.loaded&#39;, 5)
+            -&gt;type(&#39;email&#39;, $user-&gt;email)
+            -&gt;type(&#39;message&#39;, &#39;this is my message&#39;)
+            -&gt;press(&#39;Send&#39;)
+            -&gt;waitFor(&#39;.form.success&#39;)
+            -&gt;assertPathIs(&#39;/thank-you&#39;)
+            -&gt;assertSee(&#39;Thank you for your message&#39;);
+});</code></pre></div>
+
+<h3 id="toc_15">Test Driven Development</h3>
+
+<p>This is a massive concept which can be covered in much better detail by <a href="https://course.testdrivenlaravel.com/">https://course.testdrivenlaravel.com/</a></p>
+
+<p>However in a nut-shell it is the concept of instead of using your browser or something like postman to keep hitting an endpoint or a page, you write the code you WANT to interact with, a term coined as <q>Programming by wishful thinking</q> - Effectively it is write the code you WISH you could use, even if it doesn&#39;t exist yet.</p>
+
+<blockquote>
+<p>Cavet - Only really works well for bespoke functionality that doesn&#39;t have to integrate too deeply into other systems without having to worry about things like Mocking etc.</p>
+</blockquote>
+
+<p>This is a very fast, solid way to develop (assuming you&#39;re not tasked with building a GUI) as it:</p>
+
+<ul>
+<li>Removes the need to use a browser,</li>
+<li>You fulfill user story requirements as you go,</li>
+<li>A side-affect is self documenting your application code,</li>
+<li>Allows you to refactor / clean up code once you know it works,</li>
+<li>Leaves you with a suite of tests for the future!</li>
+</ul>
+
+<p>The general concept runs along the line of:</p>
+
+<ul>
+<li>Write the test</li>
+<li>Run the test</li>
+<li>Fix the failure</li>
+<li>Run the test</li>
+<li>Fix the failure</li>
+<li>etc etc etc</li>
+<li>Feature finished</li>
+</ul>
+
+<h2 id="toc_16">Writing Tests</h2>
+
+<p>A general rule of thumb is to try and make your tests only test your application code, don&#39;t worry about testing framework or cms code - it will only waste time, and you can&#39;t fix it anyway. An example might be within Laravel, do not create tests for all your relationships - as you&#39;re just testing the relationship system in laravel works - you&#39;re other tests should inherantly prove they are working anyway.</p>
+
+<h3 id="toc_17">Test Names</h3>
+
+<p>These don&#39;t need to follow PSR naming, often people find using underscores make them easier to read, e.g <code>test_a_user_can_create_a_post</code> to some might read better than <code>TestAUserCanCreateAPost</code>.</p>
+
+<p>You should try and be clear and concise about your test name, use full sentences to be as descriptive as possible, even if its long! If your tests are passing, then it won&#39;t be regually read anyway!</p>
+
+<h3 id="toc_18">Test Structure</h3>
+
+<p>A good way to organise your test code is to use a pattern known as AAA, this stands for</p>
+
+<ul>
+<li>Arrange</li>
+<li>Act</li>
+<li>Assert</li>
+</ul>
+
+<h3 id="toc_19">Arrange</h3>
+
+<p>So the arrange concept effecitvely suggests that you organise everything you need to do to get the test ready, this could look something like. Anything which you need to be sure of, you should always hard-code. e.g If you know you need the user to be <code>id = 1</code> then pass it in.</p>
+
+<div><pre class="line-numbers"><code class="language-php">function test_a_user_can_create_a_new_post()
+{
+    // Arrange
+    $user = factory(User::class)-&gt;create([
+        &#39;id&#39; =&gt; 1,
+    ]);
+    
+    $user-&gt;givePermission(&#39;create posts&#39;);
+}</code></pre></div>
+
+<h3 id="toc_20">Act / Action</h3>
+
+<p>This is where you&#39;re likely to start actually integrating with your application and where the most complex logic could likely happen, this is where you will make API calls, run methods, actions etc</p>
+
+<div><pre class="line-numbers"><code class="language-php">function test_a_user_can_create_a_new_post()
+{
+    // Arrange
+    $user = factory(User::class)-&gt;create([
+        &#39;id&#39; =&gt; 1,
+    ]);
+    
+    $user-&gt;givePermission(&#39;create posts&#39;);
+    
+    // Act
+    $post = $user-&gt;createPost([
+        &#39;title&#39; =&gt; &#39;amazing idea&#39;,
+        &#39;body&#39; =&gt; &#39;We should totes solve world hunger.&#39;,
+    ]);
+}</code></pre></div>
+
+<h3 id="toc_21">Assert</h3>
+
+<p>Technically the assertion phase is where things are proved to be right/wrong - however it might be that if an exception is thrown in your <code>createPost</code> it will also cause the test to fail.</p>
+
+<p>You will need to carefuly decide what you&#39;re actually testing for - and make sure the assertion tries to keep to this, often is it tempting to throw in as many assertions as possible, but this will just slow down your application and can lead people to start chasing geese in a test when the actual error is elsewhere.</p>
+
+<p>There are a variety of assertions which can be used, Laravel provides many custom assertions for certain things, however you can always rely on the core PHPUnit assertions, or create your own!</p>
+
+<p>You can see a selection of assertions <a href="https://laravel.com/docs/5.6/http-tests#response-assertions">https://laravel.com/docs/5.6/http-tests#response-assertions</a> but they are mentioned in a variety of places throughout the website.</p>
+
+<p>Its worth remembering that the hardcoded value should always be the 1st param you pass into an assertion, this is because some methods require this format, so they keep it consistent.</p>
+
+<p>e.g If you&#39;re testing 2 things match you should do something like:</p>
+
+<div><pre class="line-numbers"><code class="language-php">$this-&gt;assertEquals(5, $idea-&gt;count); // Good
+$this-&gt;assertEquals($idea-&gt;count, 5); // Bad</code></pre></div>
+
+<p>A basic assertion for the above test could be something like.</p>
+
+<div><pre class="line-numbers"><code class="language-php">function test_a_user_can_create_a_new_post()
+{
+    // Arrange
+    $user = factory(User::class)-&gt;create([
+        &#39;id&#39; =&gt; 1,
+    ]);
+    
+    $user-&gt;givePermission(&#39;create posts&#39;);
+    
+    // Act
+    $post = $user-&gt;createPost([
+        &#39;title&#39; =&gt; &#39;amazing idea&#39;,
+        &#39;body&#39; =&gt; &#39;We should totes solve world hunger.&#39;,
+    ]);
+    
+    // Assert
+    
+    // If we expect the method to return a Post, we need to check it is.
+    $this-&gt;assertInstanceOf(Post::class, $post);
+    
+    // We should test that the post was actually saved to the database
+    $this-&gt;assertTrue($post-&gt;exists);
+    
+    // And test it was created on behalf of our test user.
+    $this-&gt;assertEquals(1, $post-&gt;user_id);
+}</code></pre></div>
 
 
 

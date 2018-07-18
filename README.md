@@ -17,10 +17,10 @@
     - Arrange
     - Act
     - Assert
-    - Mocks
-    - API Integration
-- Running Tests
-    - Refactoring
+    - ~~Mocks~~
+    - ~~API Integration~~
+- ~~Running Tests~~
+    - ~~Refactoring~~
 
 ## Setting up PHPUnit
 
@@ -430,3 +430,130 @@ $this->browse(function ($browser) use ($user) {
 This is a massive concept which can be covered in much better detail by https://course.testdrivenlaravel.com/
 
 However in a nut-shell it is the concept of instead of using your browser or something like postman to keep hitting an endpoint or a page, you write the code you WANT to interact with, a term coined as "Programming by wishful thinking" - Effectively it is write the code you WISH you could use, even if it doesn't exist yet.
+
+> Cavet - Only really works well for bespoke functionality that doesn't have to integrate too deeply into other systems without having to worry about things like Mocking etc.
+
+This is a very fast, solid way to develop (assuming you're not tasked with building a GUI) as it:
+
+- Removes the need to use a browser,
+- You fulfill user story requirements as you go,
+- A side-affect is self documenting your application code,
+- Allows you to refactor / clean up code once you know it works,
+- Leaves you with a suite of tests for the future!
+
+The general concept runs along the line of:
+
+- Write the test
+- Run the test
+- Fix the failure
+- Run the test
+- Fix the failure
+- etc etc etc
+- Feature finished
+
+## Writing Tests
+
+A general rule of thumb is to try and make your tests only test your application code, don't worry about testing framework or cms code - it will only waste time, and you can't fix it anyway. An example might be within Laravel, do not create tests for all your relationships - as you're just testing the relationship system in laravel works - you're other tests should inherantly prove they are working anyway.
+
+### Test Names
+
+These don't need to follow PSR naming, often people find using underscores make them easier to read, e.g `test_a_user_can_create_a_post` to some might read better than `TestAUserCanCreateAPost`.
+
+You should try and be clear and concise about your test name, use full sentences to be as descriptive as possible, even if its long! If your tests are passing, then it won't be regually read anyway!
+
+### Test Structure
+
+A good way to organise your test code is to use a pattern known as AAA, this stands for
+
+- Arrange
+- Act
+- Assert
+
+### Arrange
+
+So the arrange concept effecitvely suggests that you organise everything you need to do to get the test ready, this could look something like. Anything which you need to be sure of, you should always hard-code. e.g If you know you need the user to be `id = 1` then pass it in.
+
+```php
+function test_a_user_can_create_a_new_post()
+{
+    // Arrange
+    $user = factory(User::class)->create([
+        'id' => 1,
+    ]);
+    
+    $user->givePermission('create posts');
+}
+```
+
+### Act / Action
+
+This is where you're likely to start actually integrating with your application and where the most complex logic could likely happen, this is where you will make API calls, run methods, actions etc
+
+```php
+function test_a_user_can_create_a_new_post()
+{
+    // Arrange
+    $user = factory(User::class)->create([
+        'id' => 1,
+    ]);
+    
+    $user->givePermission('create posts');
+    
+    // Act
+    $post = $user->createPost([
+        'title' => 'amazing idea',
+        'body' => 'We should totes solve world hunger.',
+    ]);
+}
+```
+
+
+### Assert
+
+Technically the assertion phase is where things are proved to be right/wrong - however it might be that if an exception is thrown in your `createPost` it will also cause the test to fail.
+
+You will need to carefuly decide what you're actually testing for - and make sure the assertion tries to keep to this, often is it tempting to throw in as many assertions as possible, but this will just slow down your application and can lead people to start chasing geese in a test when the actual error is elsewhere.
+
+There are a variety of assertions which can be used, Laravel provides many custom assertions for certain things, however you can always rely on the core PHPUnit assertions, or create your own!
+
+You can see a selection of assertions https://laravel.com/docs/5.6/http-tests#response-assertions but they are mentioned in a variety of places throughout the website.
+
+Its worth remembering that the hardcoded value should always be the 1st param you pass into an assertion, this is because some methods require this format, so they keep it consistent.
+
+e.g If you're testing 2 things match you should do something like:
+
+```php
+$this->assertEquals(5, $idea->count); // Good
+$this->assertEquals($idea->count, 5); // Bad
+```
+
+A basic assertion for the above test could be something like.
+
+```php
+function test_a_user_can_create_a_new_post()
+{
+    // Arrange
+    $user = factory(User::class)->create([
+        'id' => 1,
+    ]);
+    
+    $user->givePermission('create posts');
+    
+    // Act
+    $post = $user->createPost([
+        'title' => 'amazing idea',
+        'body' => 'We should totes solve world hunger.',
+    ]);
+    
+    // Assert
+    
+    // If we expect the method to return a Post, we need to check it is.
+    $this->assertInstanceOf(Post::class, $post);
+    
+    // We should test that the post was actually saved to the database
+    $this->assertTrue($post->exists);
+    
+    // And test it was created on behalf of our test user.
+    $this->assertEquals(1, $post->user_id);
+}
+```
