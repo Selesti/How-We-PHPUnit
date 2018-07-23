@@ -9,168 +9,6 @@
 
 
 <style type="text/css">
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p,
-blockquote {
-    margin: 0;
-    padding: 0;
-}
-body {
-    font-family: "Helvetica Neue", Helvetica, "Hiragino Sans GB", Arial, sans-serif;
-    font-size: 13px;
-    line-height: 18px;
-    color: #fff;
-    background-color: #282a36;
-    margin: 10px 13px 10px 13px;
-}
-table {
-	margin: 10px 0 15px 0;
-	border-collapse: collapse;
-}
-td,th {
-	border: 1px solid #ddd;
-	padding: 3px 10px;
-}
-th {
-	padding: 5px 10px;
-}
-a {
-    color: #59acf3;
-}
-a:hover {
-    color: #a7d8ff;
-    text-decoration: none;
-}
-a img {
-    border: none;
-}
-p {
-    margin-bottom: 9px;
-}
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    color: #fff;
-    line-height: 36px;
-}
-h1 {
-    margin-bottom: 18px;
-    font-size: 30px;
-}
-h2 {
-    font-size: 24px;
-}
-h3 {
-    font-size: 18px;
-}
-h4 {
-    font-size: 16px;
-}
-h5 {
-    font-size: 14px;
-}
-h6 {
-    font-size: 13px;
-}
-hr {
-    margin: 0 0 19px;
-    border: 0;
-    border-bottom: 1px solid #ccc;
-}
-blockquote {
-    padding: 13px 13px 21px 15px;
-    margin-bottom: 18px;
-    font-family:georgia,serif;
-    font-style: italic;
-}
-blockquote:before {
-    content:"\201C";
-    font-size:40px;
-    margin-left:-10px;
-    font-family:georgia,serif;
-    color:#eee;
-}
-blockquote p {
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 18px;
-    margin-bottom: 0;
-    font-style: italic;
-}
-code, pre {
-    font-family: Monaco, Andale Mono, Courier New, monospace;
-}
-code {
-	color: #ff4a14;
-    padding: 1px 3px;
-    font-size: 12px;
-    -webkit-border-radius: 3px;
-    -moz-border-radius: 3px;
-    border-radius: 3px;
-}
-pre {
-    display: block;
-    padding: 14px;
-    margin: 0 0 18px;
-    line-height: 16px;
-    font-size: 11px;
-    border: 1px solid #bf370f;
-    white-space: pre;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-pre code {
-    background-color: #282a36;
-    color: #ff4a14;
-    font-size: 11px;
-    padding: 0;
-}
-sup {
-    font-size: 0.83em;
-    vertical-align: super;
-    line-height: 0;
-}
-kbd {
-  display: inline-block;
-  padding: 3px 5px;
-  font-size: 11px;
-  line-height: 10px;
-  color: #555;
-  vertical-align: middle;
-  background-color: #fcfcfc;
-  border: solid 1px #ccc;
-  border-bottom-color: #bbb;
-  border-radius: 3px;
-  box-shadow: inset 0 -1px 0 #bbb;
-}
-* {
-	-webkit-print-color-adjust: exact;
-}
-@media screen and (min-width: 914px) {
-    body {
-        width: 854px;
-        margin:10px auto;
-    }
-}
-@media print {
-	body,code,pre code,h1,h2,h3,h4,h5,h6 {
-		color: black;
-	}
-	table, pre {
-		page-break-inside: avoid;
-	}
-}
-</style>
-
-<style type="text/css">
 /**
  * prism.js Dark theme for JavaScript, CSS and HTML
  * Based on the slides of the talk “/Reg(exp){2}lained/”
@@ -903,6 +741,48 @@ $this-&gt;assertEquals($idea-&gt;count, 5); // Bad</code></pre></div>
     // And test it was created on behalf of our test user.
     $this-&gt;assertEquals(1, $post-&gt;user_id);
 }</code></pre></div>
+
+<h3 id="toc_22">Mocking</h3>
+
+<p>Sometimes you do not want the whole flow of your application to execute, e.g. if you want to hit an API endpoint, which then fires an event which sends a notification to every user, but you&#39;re only interested in testing the response, you&#39;re able to provide a fake version of a class which mirrors your real classes API. This is called Mocking! Under the hood it uses a library called Mockery.</p>
+
+<p>An example using laravels built in Mocks would look something like this, assuming you were testing a notification system.</p>
+
+<div><pre class="line-numbers"><code class="language-php">
+public function test_order_notifications_send()
+{
+    // Arrange
+    $order = new Order;
+    Notification::fake();
+    
+    // Act
+    $order-&gt;ship();
+    
+    // Assert
+    Notification::assertSentTo($order-&gt;user, OrderShipped::class);
+}
+</code></pre></div>
+
+<p>If you need to mock some of your own classes it is a little more verbose. By default your mocked class  will not have any functionality, you need to assign them basic behaviour. To get started you simply pass the class you want to mock into Mockery like so...</p>
+
+<div><pre class="line-numbers"><code class="language-php">$userService = Mockery::mock(UserService::class);</code></pre></div>
+
+<p>However if you were to run <code>$userService-&gt;find(1);</code> it will return <code>void</code> or throw <code>Exception</code> as it has not been told it needs to exist. If you want it to have functionality, then you can use the following basics.</p>
+
+<div><pre class="line-numbers"><code class="language-php">$userService = Mockery::mock(UserService::class);
+
+$userService
+    -&gt;shouldReceive(&#39;create&#39;) // This actually means &quot;should it happen to receive a `create` call&quot;
+    -&gt;with(true) // and the param happens to be `true`
+    -&gt;andReturn(new Admin); // then return a new Admin</code></pre></div>
+
+<p>So now the rest of your code whenever it calls <code>$userService-&gt;create(true);</code> it will return a <code>new Admin</code> - the original method might have done a whole lot more, but you only need that part of the functionality to work.</p>
+
+<p>Sometimes you want it to implement every method, but do nothing, you can either use <code>Mockery::mock(Admin::class)-&gt;shouldIgnoreMissing()</code> or the shortcut <code>Mockery::spy()</code>s this will just return <code>null</code> for any method calls.</p>
+
+<div><pre class="line-numbers"><code class="language-php">$faked = Mockery::spy(User::class);
+$faked-&gt;helloWorld(); // null
+$faked-&gt;goodbyeWorld(); // null</code></pre></div>
 
 
 

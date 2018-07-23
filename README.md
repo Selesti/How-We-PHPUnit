@@ -557,3 +557,53 @@ function test_a_user_can_create_a_new_post()
     $this->assertEquals(1, $post->user_id);
 }
 ```
+
+### Mocking
+
+Sometimes you do not want the whole flow of your application to execute, e.g. if you want to hit an API endpoint, which then fires an event which sends a notification to every user, but you're only interested in testing the response, you're able to provide a fake version of a class which mirrors your real classes API. This is called Mocking! Under the hood it uses a library called Mockery.
+
+An example using laravels built in Mocks would look something like this, assuming you were testing a notification system.
+
+```php
+
+public function test_order_notifications_send()
+{
+    // Arrange
+    $order = new Order;
+    Notification::fake();
+    
+    // Act
+    $order->ship();
+    
+    // Assert
+    Notification::assertSentTo($order->user, OrderShipped::class);
+}
+
+```
+
+If you need to mock some of your own classes it is a little more verbose. By default your mocked class  will not have any functionality, you need to assign them basic behaviour. To get started you simply pass the class you want to mock into Mockery like so...
+
+```php
+$userService = Mockery::mock(UserService::class);
+```
+
+However if you were to run `$userService->find(1);` it will return `void` or throw `Exception` as it has not been told it needs to exist. If you want it to have functionality, then you can use the following basics.
+
+```php
+$userService = Mockery::mock(UserService::class);
+
+$userService
+    ->shouldReceive('create') // This actually means "should it happen to receive a `create` call"
+    ->with(true) // and the param happens to be `true`
+    ->andReturn(new Admin); // then return a new Admin
+```
+
+So now the rest of your code whenever it calls `$userService->create(true);` it will return a `new Admin` - the original method might have done a whole lot more, but you only need that part of the functionality to work.
+
+Sometimes you want it to implement every method, but do nothing, you can either use `Mockery::mock(Admin::class)->shouldIgnoreMissing()` or the shortcut `Mockery::spy()`s this will just return `null` for any method calls.
+
+```php
+$faked = Mockery::spy(User::class);
+$faked->helloWorld(); // null
+$faked->goodbyeWorld(); // null
+```
