@@ -19,8 +19,7 @@
     - Assert
     - Mocks
     - API Integration
-- ~~Running Tests~~
-    - ~~Refactoring~~
+- Running Tests
 
 ## Setting up PHPUnit
 
@@ -655,5 +654,3 @@ By default without any params phpunit will run the whole suite.
 However there will be times you only want to run certain things, this is where the `--filter` param comes in, it accepts basic search terms.
 
 e.g `phpunit --filter=Unit` will run everything in the unit test folder or `phpunit --filter=test_i_can_run_a_single_test` will run that specific test, it effectively does a partial match on the path to the methods, so is easy :)
-
-### Refactoring
