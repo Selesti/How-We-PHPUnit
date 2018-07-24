@@ -17,8 +17,8 @@
     - Arrange
     - Act
     - Assert
-    - ~~Mocks~~
-    - ~~API Integration~~
+    - Mocks
+    - API Integration
 - ~~Running Tests~~
     - ~~Refactoring~~
 
@@ -607,3 +607,53 @@ $faked = Mockery::spy(User::class);
 $faked->helloWorld(); // null
 $faked->goodbyeWorld(); // null
 ```
+
+### API Integration
+
+When hitting real APIs such as twitter, you are able to use Mocks as described above - however there will be likely instances where you will want to consume your own API.
+
+Laravel provides you a system to do this, if you're authenticated using the previously mentioned methods you have access to a collection of helpers like below.
+
+```php
+public function test_i_can_create_posts()
+{
+    // Arrange
+    $sentence = $this->faker->sentence();
+    
+    // Act
+    $response = $this->post('/api/posts/create', [
+       'body' => $sentence
+    ]);
+    
+    // Assert
+    $response->assertJson([
+        'success' => true,
+        'data' => [
+            'id' => 1,
+            'body' => $sentence
+        ]
+    ]);
+}
+```
+
+You have access to all other normal HTTP Verbs such as DELETE, PATCH, PUT, GET etc.
+
+You can also see the actual response body in array format using `$response->decodeResponseJson()` or raw using `$response->getContent()`;
+
+### Running Tests
+
+Running tests is easy, realistically you're most likely only ever do 2 things, run individual tests or the whole suite.
+
+Both of these are easy!
+
+If you have PHPUnit installed globally you can just run from within the project directory `phpunit` and it will read the phpunit.xml and run all your tests.
+
+If it is only installed within the project you'll need to reference the bin folder in composer e.g `./vendor/bin/phpunit`
+
+By default without any params phpunit will run the whole suite.
+
+However there will be times you only want to run certain things, this is where the `--filter` param comes in, it accepts basic search terms.
+
+e.g `phpunit --filter=Unit` will run everything in the unit test folder or `phpunit --filter=test_i_can_run_a_single_test` will run that specific test, it effectively does a partial match on the path to the methods, so is easy :)
+
+### Refactoring

@@ -9,6 +9,168 @@
 
 
 <style type="text/css">
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote {
+    margin: 0;
+    padding: 0;
+}
+body {
+    font-family: "Helvetica Neue", Helvetica, "Hiragino Sans GB", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 18px;
+    color: #fff;
+    background-color: #282a36;
+    margin: 10px 13px 10px 13px;
+}
+table {
+	margin: 10px 0 15px 0;
+	border-collapse: collapse;
+}
+td,th {
+	border: 1px solid #ddd;
+	padding: 3px 10px;
+}
+th {
+	padding: 5px 10px;
+}
+a {
+    color: #59acf3;
+}
+a:hover {
+    color: #a7d8ff;
+    text-decoration: none;
+}
+a img {
+    border: none;
+}
+p {
+    margin-bottom: 9px;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: #fff;
+    line-height: 36px;
+}
+h1 {
+    margin-bottom: 18px;
+    font-size: 30px;
+}
+h2 {
+    font-size: 24px;
+}
+h3 {
+    font-size: 18px;
+}
+h4 {
+    font-size: 16px;
+}
+h5 {
+    font-size: 14px;
+}
+h6 {
+    font-size: 13px;
+}
+hr {
+    margin: 0 0 19px;
+    border: 0;
+    border-bottom: 1px solid #ccc;
+}
+blockquote {
+    padding: 13px 13px 21px 15px;
+    margin-bottom: 18px;
+    font-family:georgia,serif;
+    font-style: italic;
+}
+blockquote:before {
+    content:"\201C";
+    font-size:40px;
+    margin-left:-10px;
+    font-family:georgia,serif;
+    color:#eee;
+}
+blockquote p {
+    font-size: 14px;
+    font-weight: 300;
+    line-height: 18px;
+    margin-bottom: 0;
+    font-style: italic;
+}
+code, pre {
+    font-family: Monaco, Andale Mono, Courier New, monospace;
+}
+code {
+	color: #ff4a14;
+    padding: 1px 3px;
+    font-size: 12px;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+}
+pre {
+    display: block;
+    padding: 14px;
+    margin: 0 0 18px;
+    line-height: 16px;
+    font-size: 11px;
+    border: 1px solid #bf370f;
+    white-space: pre;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+pre code {
+    background-color: #282a36;
+    color: #ff4a14;
+    font-size: 11px;
+    padding: 0;
+}
+sup {
+    font-size: 0.83em;
+    vertical-align: super;
+    line-height: 0;
+}
+kbd {
+  display: inline-block;
+  padding: 3px 5px;
+  font-size: 11px;
+  line-height: 10px;
+  color: #555;
+  vertical-align: middle;
+  background-color: #fcfcfc;
+  border: solid 1px #ccc;
+  border-bottom-color: #bbb;
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 #bbb;
+}
+* {
+	-webkit-print-color-adjust: exact;
+}
+@media screen and (min-width: 914px) {
+    body {
+        width: 854px;
+        margin:10px auto;
+    }
+}
+@media print {
+	body,code,pre code,h1,h2,h3,h4,h5,h6 {
+		color: black;
+	}
+	table, pre {
+		page-break-inside: avoid;
+	}
+}
+</style>
+
+<style type="text/css">
 /**
  * prism.js Dark theme for JavaScript, CSS and HTML
  * Based on the slides of the talk “/Reg(exp){2}lained/”
@@ -218,8 +380,8 @@ pre.line-numbers > code {
 <li>Arrange</li>
 <li>Act</li>
 <li>Assert</li>
-<li><del>Mocks</del></li>
-<li><del>API Integration</del></li>
+<li>Mocks</li>
+<li>API Integration</li>
 </ul></li>
 <li><del>Running Tests</del>
 
@@ -783,6 +945,54 @@ $userService
 <div><pre class="line-numbers"><code class="language-php">$faked = Mockery::spy(User::class);
 $faked-&gt;helloWorld(); // null
 $faked-&gt;goodbyeWorld(); // null</code></pre></div>
+
+<h3 id="toc_23">API Integration</h3>
+
+<p>When hitting real APIs such as twitter, you are able to use Mocks as described above - however there will be likely instances where you will want to consume your own API.</p>
+
+<p>Laravel provides you a system to do this, if you&#39;re authenticated using the previously mentioned methods you have access to a collection of helpers like below.</p>
+
+<div><pre class="line-numbers"><code class="language-php">public function test_i_can_create_posts()
+{
+    // Arrange
+    $sentence = $this-&gt;faker-&gt;sentence();
+    
+    // Act
+    $response = $this-&gt;post(&#39;/api/posts/create&#39;, [
+       &#39;body&#39; =&gt; $sentence
+    ]);
+    
+    // Assert
+    $response-&gt;assertJson([
+        &#39;success&#39; =&gt; true,
+        &#39;data&#39; =&gt; [
+            &#39;id&#39; =&gt; 1,
+            &#39;body&#39; =&gt; $sentence
+        ]
+    ]);
+}</code></pre></div>
+
+<p>You have access to all other normal HTTP Verbs such as DELETE, PATCH, PUT, GET etc.</p>
+
+<p>You can also see the actual response body in array format using <code>$response-&gt;decodeResponseJson()</code> or raw using <code>$response-&gt;getContent()</code>;</p>
+
+<h3 id="toc_24">Running Tests</h3>
+
+<p>Running tests is easy, realistically you&#39;re most likely only ever do 2 things, run individual tests or the whole suite.</p>
+
+<p>Both of these are easy!</p>
+
+<p>If you have PHPUnit installed globally you can just run from within the project directory <code>phpunit</code> and it will read the phpunit.xml and run all your tests.</p>
+
+<p>If it is only installed within the project you&#39;ll need to reference the bin folder in composer e.g <code>./vendor/bin/phpunit</code></p>
+
+<p>By default without any params phpunit will run the whole suite.</p>
+
+<p>However there will be times you only want to run certain things, this is where the <code>--filter</code> param comes in, it accepts basic search terms.</p>
+
+<p>e.g <code>phpunit --filter=Unit</code> will run everything in the unit test folder or <code>phpunit --filter=test_i_can_run_a_single_test</code> will run that specific test, it effectively does a partial match on the path to the methods, so is easy :)</p>
+
+<h3 id="toc_25">Refactoring</h3>
 
 
 
